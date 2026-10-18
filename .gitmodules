@@ -1,0 +1,3 @@
+[submodule "libs/sorach"]
+	path = libs/sorach
+	url = https://github.com/Kenlnw/sorach.git

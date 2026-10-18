@@ -1,0 +1,14 @@
+# Build output (make, and make DOUBLE=1)
+build/
+build_double/
+*.o
+*.a
+*.exe
+
+# Editor settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
