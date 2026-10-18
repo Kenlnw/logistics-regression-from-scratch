@@ -29,7 +29,7 @@ int main(void) {
                 (size_t)X_train.cols * sizeof(char*),
                 SOR_ARENA_DEFAULT_ALIGN);
 
-    int n_names = read_header(&arena, feature_names, X_train.cols, train_path);
+    read_header(&arena, feature_names, X_train.cols, train_path);
 
 
     int n_lambdas = sizeof(lambda_values) / sizeof(lambda_values[0]);
@@ -38,7 +38,7 @@ int main(void) {
 
     LogReg model = model_create(0.1, DEFAULT_THRESHOLD, 1000);
     model.w = sor_mat_new(&arena, X_train.cols, 1);
-    int best_lambda_idx = find_best_lambdas(&arena, &model, X_train, y_train, lambdas, CV_FOLDS, (unsigned int)time(NULL));
+    find_best_lambdas(&arena, &model, X_train, y_train, lambdas, CV_FOLDS, (unsigned int)time(NULL));
 
     int numeric_cols = 10;
     if (model.mean.data == NULL && model.std.data == NULL) {

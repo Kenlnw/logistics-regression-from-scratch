@@ -102,13 +102,13 @@ void model_fit(SorArena *arena, LogReg *model, SorMat X, SorMat y, int verbose) 
     const SorScalar prob_eps = 1e-7;
     const SorScalar grad_tol = 1e-5;
 
-    for (int epoch = 0; epoch < model->epochs; epoch++) {
+    for (size_t epoch = 0; epoch < model->epochs; epoch++) {
         model_predict_prob(model, O, X);    // apply sigmoid to z = X @ model->w
         sor_mat_clamp(O, prob_eps, 1 - prob_eps);
 
         // Calculate gradiant of the loss function
         sor_mat_sub(M, O, y);   // SorMat M = O - y;
-        sor_mat_mul_at(grad, X, M);  // SorMat grad = X.T @ M;
+        sor_mat_mul_tp(grad, X, M);  // SorMat grad = X.T @ M;
         sor_mat_scale(grad, (SorScalar)1 / y.rows);
 
         // Add a regularization l2 (ridge)
@@ -122,7 +122,7 @@ void model_fit(SorArena *arena, LogReg *model, SorMat X, SorMat y, int verbose) 
             model->loss = loss_func(O, y) + (0.5 * model->lambda * penalty);
 
             SorScalar train_acc = model_accuracy(arena, model, X, y);
-            printf("EPOCH %d/%d   loss: %f   accuracy: %f\n",
+            printf("EPOCH %lld/%lld   loss: %f   accuracy: %f\n",
                     epoch, model->epochs, model->loss, train_acc);
         }
 
