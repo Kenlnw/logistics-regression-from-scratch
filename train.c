@@ -31,13 +31,13 @@ int main(void) {
 
     read_header(&arena, feature_names, X_train.cols, train_path);
 
-
     int n_lambdas = sizeof(lambda_values) / sizeof(lambda_values[0]);
     SorMat lambdas = sor_mat_new(&arena, n_lambdas, 1);
     sor_mat_from_array(lambdas, lambda_values);
 
     LogReg model = model_create(DEFAULT_THRESHOLD, 1000);
     model.w = sor_mat_new(&arena, X_train.cols, 1);
+
     find_best_lambdas(&arena, &model, X_train, y_train, lambdas, CV_FOLDS, (unsigned int)time(NULL));
 
     int numeric_cols = 10;

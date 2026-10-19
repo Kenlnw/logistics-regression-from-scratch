@@ -25,7 +25,7 @@ SorScalar cv_loss(SorArena *arena, LogReg *model, SorMat X, SorMat y, const int 
     double loss_total = 0.0;
     model->lambda = lambda;
 
-    printf("%d-folds-cv. Using lambda: %f\n", folds, lambda);
+    printf("%d-folds-cv. lambda: %f\n", folds, lambda);
     for (int k = 0; k < folds; k++) {
         size_t mark = sor_arena_mark(arena);
 
@@ -34,6 +34,8 @@ SorScalar cv_loss(SorArena *arena, LogReg *model, SorMat X, SorMat y, const int 
 
         int n_val = val_end - val_start;
         int n_train = n - n_val;
+
+        printf("Round %d/%d: %d training data, %d validation data\n", k+1, folds, n_train, n_val);
 
         int *train_idx = sor_arena_alloc(arena, n_train * sizeof(int), SOR_ARENA_DEFAULT_ALIGN);
         int *val_idx = sor_arena_alloc(arena, n_val * sizeof(int), SOR_ARENA_DEFAULT_ALIGN);
@@ -70,7 +72,6 @@ SorScalar cv_loss(SorArena *arena, LogReg *model, SorMat X, SorMat y, const int 
 
         SorScalar acc = model_accuracy(arena, model, X_val, y_val);
 
-        printf("Round %d/%d:  ", k+1, folds);
         printf("loss: %f,   accuracy = %f\n", loss, acc);
 
         loss_total += loss;
@@ -93,6 +94,7 @@ int find_best_lambdas(SorArena *arena, LogReg *model, SorMat X, SorMat y, SorMat
     sor_mat_seed(rand_seed);
     shuffle_data_idx(data_idx, X.rows);
 
+    printf("Find the best L2 regularization strength (lambda)\n");
     SorMat ld_loss = sor_mat_new(arena, lambdas.rows, 1);
     for (int l = 0; l < lambdas.rows; l++)
         SOR_MAT_AT(ld_loss, l, 0) = cv_loss(arena, model, X, y, data_idx, SOR_MAT_AT(lambdas, l, 0), folds);
