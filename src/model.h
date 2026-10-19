@@ -23,7 +23,7 @@ typedef struct {
     SorMat std;
 } LogReg;
 
-LogReg model_create(SorScalar lr, SorScalar threshold, size_t epochs);
+LogReg model_create(SorScalar threshold, size_t epochs);
 SorScalar sigmoid(SorScalar z);
 SorScalar loss_func(SorMat O, SorMat y);
 void model_predict_prob(LogReg *model, SorMat out, SorMat X);

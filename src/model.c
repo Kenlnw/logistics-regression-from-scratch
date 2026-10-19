@@ -1,9 +1,9 @@
 #include "model.h"
 
 
-LogReg model_create(SorScalar lr, SorScalar threshold, size_t epochs) {
+LogReg model_create(SorScalar threshold, size_t epochs) {
     LogReg model = {
-        .lr = lr,
+        .lr = 1.0,
         .loss = 0.0,
         .lambda = 0.0,
         .threshold = threshold,
@@ -94,39 +94,52 @@ void model_fit(SorArena *arena, LogReg *model, SorMat X, SorMat y, int verbose) 
 
     size_t mark = sor_arena_mark(arena);
 
-    SorMat O = sor_mat_new(arena, X.rows, model->w.cols);
-    SorMat pred = sor_mat_new(arena, X.rows, model->w.cols);
-    SorMat M = sor_mat_new(arena, pred.rows, pred.cols);
-    SorMat grad = sor_mat_new(arena, X.cols, M.cols);
+    SorMat p = sor_mat_new(arena, X.rows, model->w.cols);  // p = sigmoid(z)
+    SorMat Q = sor_mat_new(arena, X.rows, model->w.cols);
+    SorMat grad = sor_mat_new(arena, X.cols, model->w.cols);
+    SorMat Xg = sor_mat_new(arena, X.rows, model->w.cols);
+    SorMat SXg = sor_mat_new(arena, X.rows, model->w.cols);
+    SorMat Hg = sor_mat_new(arena, X.cols, model->w.cols);
 
     const SorScalar prob_eps = 1e-7;
     const SorScalar grad_tol = 1e-5;
 
     for (size_t epoch = 0; epoch < model->epochs; epoch++) {
-        model_predict_prob(model, O, X);    // apply sigmoid to z = X @ model->w
-        sor_mat_clamp(O, prob_eps, 1 - prob_eps);
+        model_predict_prob(model, p, X);    // apply sigmoid to z = X @ model->w
+        sor_mat_clamp(p, prob_eps, 1 - prob_eps);
 
-        // Calculate gradiant of the loss function
-        sor_mat_sub(M, O, y);   // SorMat M = O - y;
-        sor_mat_mul_tp(grad, X, M);  // SorMat grad = X.T @ M;
+        // Calculate gradiant of the loss function (with L2, bias excluded)
+        sor_mat_sub(Q, p, y);   // SorMat Q = p - y;
+        sor_mat_mul_tp(grad, X, Q);  // SorMat grad = X.T @ Q;
         sor_mat_scale(grad, (SorScalar)1 / y.rows);
+        for (int i = 1; i < grad.rows; i++)
+            SOR_MAT_AT(grad, i, 0) += model->lambda * SOR_MAT_AT(model->w, i, 0);
 
-        // Add a regularization l2 (ridge)
-        for (int j = 1; j < model->w.rows; j++)
-            SOR_MAT_AT(grad, j, 0) += model->lambda * SOR_MAT_AT(model->w, j, 0);
+        if (sor_mat_norm(grad) < grad_tol) break;
+
+        // Hg = (1/N) X.T @ S @ X @ g (with L2, bias excluded)
+        sor_mat_mul(Xg, X, grad);
+        for (int i = 0; i < Xg.rows; i++)
+            SXg.data[i] = p.data[i] * (1 - p.data[i]) * Xg.data[i];
+        sor_mat_mul_tp(Hg, X, SXg);
+        sor_mat_scale(Hg, (SorScalar)1 / y.rows);
+        for (int i = 1; i < Hg.rows; i++)
+            SOR_MAT_AT(Hg, i, 0) += model->lambda * SOR_MAT_AT(grad, i, 0);
+
+        // Exact learning rate along -g for the local quadratic model
+        SorScalar gHg = sor_mat_dot(grad, Hg);
+        model->lr = (gHg > 1e-12) ? sor_mat_dot(grad, grad) / gHg : 1.0;
 
         if ((epoch % 100 == 0 || epoch == model->epochs - 1) && verbose == 1) {
             // Calculate loss function for every 100 epochs
             SorScalar w0 = SOR_MAT_AT(model->w, 0, 0);
             SorScalar penalty = sor_mat_dot(model->w, model->w) - w0*w0;
-            model->loss = loss_func(O, y) + (0.5 * model->lambda * penalty);
+            model->loss = loss_func(p, y) + (0.5 * model->lambda * penalty);
 
             SorScalar train_acc = model_accuracy(arena, model, X, y);
             printf("EPOCH %lld/%lld   loss: %f   accuracy: %f\n",
                     epoch, model->epochs, model->loss, train_acc);
         }
-
-        if (sor_mat_norm(grad) < grad_tol) break;
 
         // Adjust weight vecotor by gradient descent
         sor_mat_add_scaled(model->w, -model->lr, grad);
