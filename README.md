@@ -94,7 +94,7 @@ Every $H_{jk}$ is one entry of a sum of outer products, so the whole matrix is
 ```math
 H = \frac{1}{N}\sum_{i=1}^{N} \sigma(z_i)\big(1-\sigma(z_i)\big)\,\mathbf{x}_i\mathbf{x}_i^\top
   = \frac{1}{N} X^\top S X,
-\qquad S = \operatorname{diag}\!\big(p_i(1 - p_i)\big)
+\qquad S = \mathrm{diag}\!\big(p_i(1 - p_i)\big)
 ```
 
 Since every $p_i(1-p_i) > 0$, $H$ is positive semi-definite: the loss is
